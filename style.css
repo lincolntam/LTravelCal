@@ -6,7 +6,7 @@
 
 body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 0; }
 
-/* ✅ 優化 Banner：減輕漸層以露出更多白色 Model 3 */
+/* Banner 漸層優化 */
 .app-banner {
     width: 100%; height: 260px; 
     background-image: url('banner.jpg'); background-size: cover; background-position: center; position: relative;
@@ -16,18 +16,23 @@ body { background-color: var(--bg); color: var(--text); font-family: -apple-syst
     background: linear-gradient(to top, #050505 10%, rgba(5,5,5,0.6) 40%, transparent 100%);
 }
 .banner-overlay h1 { font-size: 32px; font-weight: 800; margin: 0; text-shadow: 0 4px 15px rgba(0,0,0,0.9); }
-.banner-overlay p { font-size: 13px; color: var(--text-dim); margin-top: 5px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+.banner-overlay p { font-size: 13px; color: var(--text-dim); margin-top: 5px; }
 
 .app-container { max-width: 500px; margin: -20px auto 0; position: relative; z-index: 2; padding: 0 16px; box-sizing: border-box; }
 .card { background: var(--card); border-radius: 18px; padding: 18px; margin-bottom: 12px; border: 1px solid var(--border); }
 .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
 .card-header label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
 
-/* ✅ 強化的深色 Datetime 與輸入框樣式 */
+/* ✅ 修復時間框比例問題 */
+.settings-group { display: flex; flex-direction: column; gap: 10px; }
+.setting-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.setting-item span { font-size: 13px; color: var(--text-dim); white-space: nowrap; min-width: 65px; }
+
 .node-input, input[type="datetime-local"], select {
-    width: 100%; background: #1C1C1E; border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px; color: white; font-size: 15px; margin-bottom: 8px; box-sizing: border-box;
-    color-scheme: dark; /* 讓 iOS/Android 的日期面板也變深色 */
+    flex: 1; /* 讓時間框自動填滿剩餘空間 */
+    background: #1C1C1E; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; color: white; font-size: 14px; box-sizing: border-box;
+    color-scheme: dark;
 }
 
 .action-row { display: flex; gap: 10px; margin-top: 10px; }
@@ -45,7 +50,12 @@ body { background-color: var(--bg); color: var(--text); font-family: -apple-syst
 .t-btn.visible { display: block; }
 .t-btn.active { background: #2C1014; border-color: var(--primary); color: var(--primary); font-weight: bold; }
 
-#map { height: 280px; border-radius: 16px; margin: 15px 0; border: 1px solid var(--border); }
+/* ✅ 地圖動態展開機制 */
+#map { 
+    height: 0; width: 100%; border-radius: 16px; margin: 0; 
+    border: none; transition: height 0.4s ease, margin 0.4s ease; overflow: hidden;
+}
+#map.active { height: 280px; margin: 15px 0; border: 1px solid var(--border); }
 
 .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .stat-card { background: var(--card); padding: 15px; border-radius: 16px; border: 1px solid var(--border); text-align: center; }
@@ -62,7 +72,6 @@ body { background-color: var(--bg); color: var(--text); font-family: -apple-syst
 .primary-btn { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 14px; font-weight: bold; }
 .savings-tag { font-size: 11px; color: var(--savings); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
 
-/* ✅ 修正後的可視版本號 */
 .version-tag { 
     position: fixed; right: 15px; bottom: 145px; z-index: 1000;
     font-size: 9px; color: var(--text-dim); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;

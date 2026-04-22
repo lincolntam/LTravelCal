@@ -1,4 +1,8 @@
-/* (L)TravelCal - Version 0.31 */
+/* (L)TravelCal - Version 0.32 
+   - Fixed Datetime Layout 
+   - Dynamic Map Visibility
+   - Multi-Renderer Support
+*/
 
 let map, ds, drGo, drBack;
 let returnMode = false;
@@ -17,16 +21,10 @@ const TUNNEL_DATA = [
 
 function initApp() {
     ds = new google.maps.DirectionsService();
-    // ✅ 去程：紅色
-    drGo = new google.maps.DirectionsRenderer({ 
-        polylineOptions: { strokeColor: "#E3193F", strokeWeight: 6, strokeOpacity: 0.8 } 
-    });
-    // ✅ 回程：藍色
-    drBack = new google.maps.DirectionsRenderer({ 
-        polylineOptions: { strokeColor: "#1976D2", strokeWeight: 5, strokeOpacity: 0.7 },
-        suppressMarkers: true 
-    });
+    drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#E3193F", strokeWeight: 6 } });
+    drBack = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#1976D2", strokeWeight: 5 }, suppressMarkers: true });
     
+    // 初始化日期
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
     document.getElementById('start-time').value = (new Date(now - offset)).toISOString().slice(0, 16);
@@ -88,13 +86,25 @@ function smartFilterTunnels() {
 async function calculate() {
     const inputs = document.querySelectorAll('.node-input');
     const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 2);
-    if (locs.length < 2) return;
+    const mapEl = document.getElementById('map');
 
-    if (!map) map = new google.maps.Map(document.getElementById('map'), { 
-        zoom: 12, center: { lat: 22.3, lng: 114.1 }, 
-        disableDefaultUI: true, 
-        styles: [{stylers:[{invert_lightness:true}]}] 
-    });
+    if (locs.length < 2) {
+        mapEl.classList.remove('active');
+        return;
+    }
+
+    // ✅ 偵測到地點，激活並渲染地圖
+    mapEl.classList.add('active');
+    if (!map) {
+        map = new google.maps.Map(mapEl, { 
+            zoom: 12, center: { lat: 22.3, lng: 114.1 }, 
+            disableDefaultUI: true, 
+            styles: [{stylers:[{invert_lightness:true}]}] 
+        });
+    }
+
+    // 強制更新地圖尺寸以防黑塊
+    setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
 
     drGo.setMap(null); drBack.setMap(null);
 
