@@ -8,7 +8,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="apple-touch-icon" href="favicon.ico">
 
-    <link rel="stylesheet" href="style.css?v=0.33">
+    <link rel="stylesheet" href="style.css?v=0.33.6">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
@@ -62,9 +62,10 @@
                 <div class="setting-item">
                     <span>充電方式</span>
                     <select id="car-model" onchange="calculate()">
+                        <option value="0.160|1.343" selected>電動車住宅 - 非高峰 ($1.343)</option>
+                        <option value="0.160|1.773">電動車住宅 - 高峰 ($1.773)</option>
                         <option value="0.160|3.85">Tesla Supercharger 繁忙 ($3.85)</option>
-                        <option value="0.160|2.10">Tesla Supercharger 非繁忙 ($2.10)</option>
-                        <option value="0.180|0">免費充電站 (只計損耗)</option>
+                        <option value="0.160|2.43">Tesla Supercharger 非繁忙 ($2.43)</option>
                     </select>
                 </div>
             </div>
@@ -112,9 +113,9 @@
     </footer>
 </div>
 
-<div class="version-tag">(L)TravelCal v0.33</div>
+<div class="version-tag">(L)TravelCal v0.33.6</div>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrlGmF4KTgFE8TeZyntoyaxxc6Qq0e7jY&libraries=places&callback=initApp" async defer></script>
-<script src="app.js?v=0.33"></script>
+<script src="app.js?v=0.33.6"></script>
 </body>
 </html>

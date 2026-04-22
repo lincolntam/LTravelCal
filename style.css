@@ -1,121 +1,74 @@
-<!DOCTYPE html>
-<html lang="zh-HK">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>(L)TravelCal - Precision Navigation</title>
-    
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="apple-touch-icon" href="favicon.ico">
+:root {
+    --primary: #E3193F; --bg: #050505; --card: #141414;
+    --text: #FFFFFF; --text-dim: #8E8E93; --border: #2C2C2E;
+    --savings: #4CD964;
+}
 
-    <link rel="stylesheet" href="style.css?v=0.33.6">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-</head>
-<body>
+body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
 
-<div class="app-banner">
-    <div class="banner-overlay">
-        <h1>(L)TravelCal</h1>
-        <p>Precision Navigation • Dynamic Tolls • Energy Logic</p>
-    </div>
-</div>
+.app-banner {
+    width: 100%; height: 260px; 
+    background-image: url('banner.jpg'); background-size: cover; background-position: center; position: relative;
+}
+.banner-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 20px;
+    background: linear-gradient(to top, #050505 10%, rgba(5,5,5,0.6) 40%, transparent 100%);
+}
+.banner-overlay h1 { font-size: 32px; font-weight: 800; margin: 0; text-shadow: 0 4px 15px rgba(0,0,0,0.9); }
+.banner-overlay p { font-size: 13px; color: var(--text-dim); margin-top: 5px; }
 
-<div class="app-container">
-    <main class="content">
-        <section class="card">
-            <div class="card-header">
-                <span class="material-icons">place</span>
-                <label>1. 行程節點 (Nodes)</label>
-            </div>
-            <div id="nodes-container">
-                <div class="input-group">
-                    <input class="node-input" placeholder="由哪裡出發？" autocomplete="off">
-                </div>
-                <div class="input-group">
-                    <input class="node-input" placeholder="目的地在哪？" autocomplete="off">
-                </div>
-            </div>
-            <div class="action-row">
-                <button class="secondary-btn" onclick="addNode()">
-                    <span class="material-icons">add_location</span> 中途站
-                </button>
-                <button class="secondary-btn" id="retBtn" onclick="toggleReturn()">
-                    <span class="material-icons">sync</span> 往返模式
-                </button>
-            </div>
-        </section>
+.app-container { max-width: 500px; margin: -20px auto 0; position: relative; z-index: 2; padding: 0 16px; box-sizing: border-box; }
+.card { background: var(--card); border-radius: 18px; padding: 18px; margin-bottom: 12px; border: 1px solid var(--border); }
+.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
+.card-header label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
 
-        <section class="card">
-            <div class="card-header">
-                <span class="material-icons">settings</span>
-                <label>2. 偏好設定 (Settings)</label>
-            </div>
-            <div class="settings-group">
-                <div class="setting-item">
-                    <span>去程時間</span>
-                    <input type="datetime-local" id="start-time" onchange="calculate()">
-                </div>
-                <div class="setting-item return-only conditional-show">
-                    <span>回程時間</span>
-                    <input type="datetime-local" id="return-time" onchange="calculate()">
-                </div>
-                <div class="setting-item">
-                    <span>充電方式</span>
-                    <select id="car-model" onchange="calculate()">
-                        <option value="0.160|1.343" selected>電動車住宅 - 非高峰 ($1.343)</option>
-                        <option value="0.160|1.773">電動車住宅 - 高峰 ($1.773)</option>
-                        <option value="0.160|3.85">Tesla Supercharger 繁忙 ($3.85)</option>
-                        <option value="0.160|2.43">Tesla Supercharger 非繁忙 ($2.43)</option>
-                    </select>
-                </div>
-            </div>
-        </section>
+.conditional-show { display: none; }
 
-        <section class="card conditional-show">
-            <div class="card-header">
-                <span class="material-icons">directions_car</span>
-                <label>3. 去程隧道選擇 (Outbound)</label>
-            </div>
-            <div class="tunnel-grid" id="goTunnels"></div>
-        </section>
+.settings-group { display: flex; flex-direction: column; gap: 10px; }
+.setting-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.setting-item span { font-size: 13px; color: var(--text-dim); white-space: nowrap; min-width: 65px; }
 
-        <section class="card conditional-show return-only">
-            <div class="card-header">
-                <span class="material-icons">settings_backup_restore</span>
-                <label>4. 回程隧道選擇 (Return)</label>
-            </div>
-            <div class="tunnel-grid" id="backTunnels"></div>
-        </section>
+.node-input, input[type="datetime-local"], select {
+    flex: 1; background: #1C1C1E; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; color: white; font-size: 14px; box-sizing: border-box; color-scheme: dark;
+}
 
-        <div id="map"></div>
+.action-row { display: flex; gap: 10px; margin-top: 10px; }
+.secondary-btn {
+    flex: 1; height: 44px; background: #2C2C2E; color: white; border: none;
+    border-radius: 12px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.secondary-btn.active { background: #2C1014; color: var(--primary); border: 1px solid var(--primary); }
 
-        <section class="stats-grid">
-            <div class="stat-card"><span>總里程</span><b id="km">0.0 km</b></div>
-            <div class="stat-card"><span>總時間</span><b id="duration">0 min</b></div>
-            <div class="stat-card"><span>總隧道費</span><b id="t-fee">$0</b></div>
-            <div class="stat-card"><span>總充電費</span><b id="e-cost">$0</b></div>
-        </section>
-        <div style="height: 160px;"></div>
-    </main>
+.tunnel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.t-btn {
+    background: #1C1C1E; border: 1px solid var(--border);
+    padding: 12px 4px; border-radius: 10px; color: #EEE; font-size: 11px; text-align: center; cursor: pointer;
+}
+.t-btn.active { background: #2C1014; border-color: var(--primary); color: var(--primary); font-weight: bold; }
 
-    <footer class="bottom-nav">
-        <div class="nav-content">
-            <div class="total-price">
-                <small>總預算估算</small>
-                <div class="price-val">HK$ <span id="total">0.0</span></div>
-                <div class="savings-tag">
-                    <span class="material-icons" style="font-size: 12px;">leaf_spark</span>
-                    預計節省燃油開支: <span id="savings">$0.0</span>
-                </div>
-            </div>
-            <button class="primary-btn" onclick="calculate()">更新預算</button>
-        </div>
-    </footer>
-</div>
+#map { 
+    height: 0; width: 100%; border-radius: 16px; margin: 0; 
+    border: none; transition: height 0.4s ease, margin 0.4s ease; overflow: hidden;
+}
+#map.active { height: 280px; margin: 15px 0; border: 1px solid var(--border); }
 
-<div class="version-tag">(L)TravelCal v0.33.6</div>
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.stat-card { background: var(--card); padding: 15px; border-radius: 16px; border: 1px solid var(--border); text-align: center; }
+.stat-card span { display: block; font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
+.stat-card b { font-size: 18px; }
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrlGmF4KTgFE8TeZyntoyaxxc6Qq0e7jY&libraries=places&callback=initApp" async defer></script>
-<script src="app.js?v=0.33.6"></script>
-</body>
-</html>
+.bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(20, 20, 20, 0.9); backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border); padding: 15px 20px 45px; z-index: 100;
+}
+.nav-content { max-width: 460px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.price-val { font-size: 30px; font-weight: 800; color: var(--primary); }
+.primary-btn { background: var(--primary); color: white; border: none; padding: 15px 25px; border-radius: 14px; font-weight: bold; }
+.savings-tag { font-size: 11px; color: var(--savings); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+.version-tag { 
+    position: fixed; right: 15px; bottom: 145px; z-index: 1000;
+    font-size: 9px; color: var(--text-dim); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;
+}
