@@ -1,4 +1,4 @@
-/* (L)TravelCal - Version 0.33.6 */
+/* (L)TravelCal - Version 0.33.8 */
 
 let map, ds, drGo, drBack;
 let returnMode = false;
@@ -20,7 +20,6 @@ function initApp() {
     drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#E3193F", strokeWeight: 6 } });
     drBack = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#1976D2", strokeWeight: 5 }, suppressMarkers: true });
     
-    // 初始化時間
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
     document.getElementById('start-time').value = (new Date(now - offset)).toISOString().slice(0, 16);
@@ -72,22 +71,17 @@ function getToll(loc, targetDate) {
 async function calculate() {
     const inputs = document.querySelectorAll('.node-input');
     const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 2);
-    const condElements = document.querySelectorAll('.conditional-show');
     const mapEl = document.getElementById('map');
 
     if (locs.length < 2) {
-        condElements.forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.conditional-show, .return-only').forEach(el => el.style.display = 'none');
         mapEl.classList.remove('active');
         return;
     }
 
-    condElements.forEach(el => {
-        if (el.classList.contains('return-only')) {
-            el.style.display = returnMode ? 'block' : 'none';
-        } else {
-            el.style.display = 'block';
-        }
-    });
+    document.querySelectorAll('.conditional-show').forEach(el => { el.style.display = 'block'; });
+    document.querySelectorAll('.return-only').forEach(el => { el.style.display = returnMode ? 'block' : 'none'; });
+
     mapEl.classList.add('active');
 
     if (!map) {
@@ -123,12 +117,7 @@ async function getRouteData(start, end, tunnels, time) {
     return new Promise(resolve => {
         let pts = tunnels.map(t => ({ location: t.loc, stopover: true, lat: t.lat, toll: getToll(t.loc, time) }));
         pts.sort((a, b) => end.includes('Sha Tin') ? a.lat - b.lat : b.lat - a.lat);
-        ds.route({ 
-            origin: start, 
-            destination: end, 
-            waypoints: pts.map(p=>({location:p.location, stopover:true})), 
-            travelMode: 'DRIVING' 
-        }, (res, stat) => {
+        ds.route({ origin: start, destination: end, waypoints: pts.map(p=>({location:p.location, stopover:true})), travelMode: 'DRIVING' }, (res, stat) => {
             if (stat === 'OK') {
                 const km = res.routes[0].legs.reduce((a, b) => a + b.distance.value, 0) / 1000;
                 const sec = res.routes[0].legs.reduce((a, b) => a + b.duration.value, 0);
