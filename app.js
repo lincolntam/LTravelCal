@@ -1,11 +1,8 @@
-/* (L)TravelCal - Version 0.27
-   - Features: Bi-directional logic, Smart Tolls, Energy Efficiency vs Fuel
-*/
+/* (L)TravelCal - Version 0.29 */
 
 let map, ds, drGo;
 let returnMode = false;
 
-// 隧道數據庫 (包含 2026 分時段收費邏輯)
 const TUNNEL_DATA = [
     { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|元朗|屯門", toll: "tlt", lat: 22.41 },
     { id: "smt", name: "城門", loc: "Shing Mun Tunnels", match: "Tsuen Wan|Sha Tin|葵涌|荃灣|沙田", toll: 5, lat: 22.38 },
@@ -22,7 +19,6 @@ function initApp() {
     ds = new google.maps.DirectionsService();
     drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#E3193F", strokeWeight: 5 } });
     
-    // 初始化時間 (去程現在，回程 4 小時後)
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
     document.getElementById('start-time').value = (new Date(now - offset)).toISOString().slice(0, 16);
@@ -58,18 +54,16 @@ function getToll(loc, targetDate) {
     const h = targetDate.getHours() + targetDate.getMinutes()/60;
     const isSpecial = (day === 0 || day === 6); 
 
-    // 三隧分流分時段邏輯
     if (data.toll === "h") {
-        if (!isSpecial) { // 平日
+        if (!isSpecial) {
             if ((h >= 7.5 && h < 10.25) || (h >= 16.5 && h < 19)) return 60;
             if (h >= 10.25 && h < 16.5) return 30;
             return 20;
-        } else { // 週末/假期
+        } else {
             if (h >= 10 && h < 19.25) return 25;
             return 20;
         }
     }
-    // 大欖隧道分時段邏輯 (2026新制)
     if (data.toll === "tlt") return (h >= 7.5 && h < 9.5) || (h >= 17.5 && h < 19) ? 45 : 18;
     return data.toll;
 }
@@ -127,7 +121,6 @@ async function getRouteData(start, end, tunnels, time) {
         let pts = tunnels.map(t => ({ location: t.loc, stopover: true, lat: t.lat, toll: getToll(t.loc, time) }));
         const ntKeywords = ['sha tin', 'tai po', 'fanling', 'yuen long', 'tuen mun', 'fo tan', '沙田', '火炭', '大埔'];
         const isNorthbound = ntKeywords.some(k => end.toLowerCase().includes(k));
-        
         if (isNorthbound) pts.sort((a, b) => a.lat - b.lat);
         else pts.sort((a, b) => b.lat - a.lat);
 
@@ -155,13 +148,11 @@ function updateUI(km, toll, sec) {
     document.getElementById('e-cost').innerText = "$" + energy.toFixed(1);
     document.getElementById('total').innerText = evTotal.toFixed(1);
 
-    // 節省開支計算 ($1.8/km 基準)
     const fuelCostBase = km * 1.8; 
     const savedAmount = fuelCostBase - energy;
     const savingsEl = document.getElementById('savings');
     savingsEl.innerText = "$" + Math.max(0, savedAmount).toFixed(1);
 
-    // 視覺回饋
     savingsEl.style.color = "#FFD700";
     setTimeout(() => { savingsEl.style.color = "#4CD964"; }, 500);
 }

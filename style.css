@@ -12,17 +12,26 @@ body {
 
 .app-banner {
     width: 100%; height: 260px; 
-    background-image: url('https://i.pinimg.com/736x/d5/27/bb/d527bb18254feb3ee9bb04512bef8c5d.jpg'); 
+    /* 白色動感背景圖 */
+    background-image: url('https://i.pinimg.com/736x/8a/91/91/8a9191d90f23f666f916694602f06b63.jpg'); 
     background-size: cover; background-position: center; position: relative;
 }
 
 .banner-overlay {
     position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 20px;
-    background: linear-gradient(to top, var(--bg) 25%, transparent);
+    background: linear-gradient(to top, var(--bg) 35%, transparent);
 }
 
-.banner-overlay h1 { font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -1px; }
-.banner-overlay p { font-size: 12px; color: var(--text-dim); margin: 6px 0 0; font-weight: 400; letter-spacing: 0.5px; }
+.banner-overlay h1 { 
+    font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -1px; 
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+
+.banner-overlay p { 
+    font-size: 12px; color: var(--text-dim); margin: 6px 0 0; 
+    font-weight: 400; letter-spacing: 0.5px;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.6);
+}
 
 .app-container { max-width: 500px; margin: -30px auto 0; position: relative; z-index: 2; padding: 0 16px; box-sizing: border-box; }
 
@@ -35,21 +44,17 @@ body {
     padding: 14px; color: white; font-size: 15px; margin-bottom: 8px; box-sizing: border-box;
 }
 
-.action-row { display: flex; gap: 10px; margin-top: 10px; }
+.action-row { display: flex; gap: 10px; margin-top: 10px; align-items: stretch; }
 .secondary-btn {
-    flex: 1; background: #2C2C2E; border: none; color: white; padding: 12px;
-    border-radius: 12px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+    flex: 1; height: 44px; background: #2C2C2E; border: 1px solid transparent; color: white;
+    border-radius: 12px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; box-sizing: border-box;
 }
 .secondary-btn.active { background: #2C1014; color: var(--primary); border: 1px solid var(--primary); }
-
-.settings-group { display: flex; flex-direction: column; gap: 12px; }
-.setting-item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--text-dim); }
-.setting-item input, .setting-item select { background: #1C1C1E; color: white; border: 1px solid var(--border); padding: 8px; border-radius: 8px; }
 
 .tunnel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .t-btn {
     display: none; background: #1C1C1E; border: 1px solid var(--border);
-    padding: 12px 4px; border-radius: 10px; color: #666; font-size: 11px; text-align: center; cursor: pointer; transition: 0.2s;
+    padding: 12px 4px; border-radius: 10px; color: #666; font-size: 11px; text-align: center; cursor: pointer;
 }
 .t-btn.visible { display: block; }
 .t-btn.active { background: #2C1014; border-color: var(--primary); color: var(--primary); font-weight: bold; }
@@ -69,7 +74,7 @@ body {
 .nav-content { max-width: 460px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
 .price-val { font-size: 30px; font-weight: 800; color: var(--primary); }
 .savings-tag { font-size: 11px; color: var(--savings); margin-top: 4px; display: flex; align-items: center; gap: 4px; font-weight: 500; }
-.primary-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 14px; font-weight: bold; cursor: pointer; transition: 0.1s; }
+.primary-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 14px; font-weight: bold; cursor: pointer; }
 
 .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); margin-top: 10px; }
 .version-tag { position: fixed; right: 15px; bottom: 130px; font-size: 9px; color: var(--text-dim); opacity: 0.3; }
