@@ -35,7 +35,6 @@ body {
     padding: 14px; color: white; font-size: 15px; margin-bottom: 8px; box-sizing: border-box;
 }
 
-/* 修正按鈕排版 */
 .action-row { display: flex; gap: 10px; margin-top: 5px; }
 .secondary-btn {
     flex: 1; background: #2C2C2E; border: none; color: white; padding: 12px;
@@ -43,7 +42,6 @@ body {
 }
 .secondary-btn.active { background: #2C1014; color: var(--primary); border: 1px solid var(--primary); }
 
-/* 修正設定排版 */
 .setting-item {
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 0; border-bottom: 1px solid var(--border);
