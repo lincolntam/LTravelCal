@@ -1,12 +1,11 @@
-/* Tesla Smart Route HK - Version 0.21
-   - Fix: Return Mode functional implementation (calculates A<->B sum)
-   - Update: Weekend/Holiday vs Weekday toll logic based on Date
-   - Fix: Illegal property removal from waypoints
+/* (L)TravelCal - Version 0.27
+   - Features: Bi-directional logic, Smart Tolls, Energy Efficiency vs Fuel
 */
 
 let map, ds, drGo;
 let returnMode = false;
 
+// 隧道數據庫 (包含 2026 分時段收費邏輯)
 const TUNNEL_DATA = [
     { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|元朗|屯門", toll: "tlt", lat: 22.41 },
     { id: "smt", name: "城門", loc: "Shing Mun Tunnels", match: "Tsuen Wan|Sha Tin|葵涌|荃灣|沙田", toll: 5, lat: 22.38 },
@@ -23,13 +22,15 @@ function initApp() {
     ds = new google.maps.DirectionsService();
     drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#E3193F", strokeWeight: 5 } });
     
-    // 初始化為目前時間 (適配 datetime-local 格式)
+    // 初始化時間 (去程現在，回程 4 小時後)
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
     document.getElementById('start-time').value = (new Date(now - offset)).toISOString().slice(0, 16);
-    
+    document.getElementById('return-time').value = (new Date(now.getTime() + 4*60*60*1000 - offset)).toISOString().slice(0, 16);
+
     document.querySelectorAll('.node-input').forEach(bindAutocomplete);
-    renderButtons('goTunnels');
+    renderButtons('goTunnels', 'go');
+    renderButtons('backTunnels', 'back');
     smartFilterTunnels(); 
 }
 
@@ -38,11 +39,11 @@ function bindAutocomplete(inp) {
     ac.addListener('place_changed', () => { smartFilterTunnels(); calculate(); });
 }
 
-function renderButtons(id) {
+function renderButtons(id, prefix) {
     const container = document.getElementById(id);
     TUNNEL_DATA.forEach(t => {
         const div = document.createElement('div');
-        div.className = 't-btn';
+        div.className = `t-btn ${prefix}-t`;
         div.innerText = t.name;
         div.onclick = function() { this.classList.toggle('active'); calculate(); };
         div.setAttribute('data-loc', t.loc);
@@ -53,23 +54,22 @@ function renderButtons(id) {
 function getToll(loc, targetDate) {
     const data = TUNNEL_DATA.find(d => d.loc === loc);
     if (!data) return 0;
-    
-    const day = targetDate.getDay(); // 0 是星期日
+    const day = targetDate.getDay(); 
     const h = targetDate.getHours() + targetDate.getMinutes()/60;
-    const isSpecial = (day === 0 || day === 6); // 簡化：週六日視為假日收費
+    const isSpecial = (day === 0 || day === 6); 
 
+    // 三隧分流分時段邏輯
     if (data.toll === "h") {
-        if (!isSpecial) {
-            // 平日三色收費 (紅/東/西隧)
+        if (!isSpecial) { // 平日
             if ((h >= 7.5 && h < 10.25) || (h >= 16.5 && h < 19)) return 60;
             if (h >= 10.25 && h < 16.5) return 30;
             return 20;
-        } else {
-            // 週末/公眾假期收費
+        } else { // 週末/假期
             if (h >= 10 && h < 19.25) return 25;
             return 20;
         }
     }
+    // 大欖隧道分時段邏輯 (2026新制)
     if (data.toll === "tlt") return (h >= 7.5 && h < 9.5) || (h >= 17.5 && h < 19) ? 45 : 18;
     return data.toll;
 }
@@ -86,24 +86,27 @@ function smartFilterTunnels() {
 }
 
 async function calculate() {
+    const btn = document.querySelector('.primary-btn');
+    btn.style.opacity = "0.7";
+
     const inputs = document.querySelectorAll('.node-input');
     const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 2);
-    if (locs.length < 2) return;
+    if (locs.length < 2) { btn.style.opacity = "1"; return; }
 
-    const time = new Date(document.getElementById('start-time').value);
-    const selectedTunnels = Array.from(document.querySelectorAll('.t-btn.active')).map(b => 
+    const goTime = new Date(document.getElementById('start-time').value);
+    const goSelected = Array.from(document.querySelectorAll('.go-t.active')).map(b => 
         TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc'))
     );
+    const go = await getRouteData(locs[0], locs[locs.length-1], goSelected, goTime);
 
-    // 1. 去程計算
-    const go = await getRouteData(locs[0], locs[locs.length-1], selectedTunnels, time);
     let totalKm = go.km, totalToll = go.toll, totalSec = go.sec;
 
-    // 2. 往返模式回程計算
     if (returnMode) {
-        // 回程時間預設為 4 小時後
-        const returnTime = new Date(time.getTime() + 4 * 60 * 60 * 1000);
-        const back = await getRouteData(locs[locs.length-1], locs[0], selectedTunnels, returnTime);
+        const backTime = new Date(document.getElementById('return-time').value);
+        const backSelected = Array.from(document.querySelectorAll('.back-t.active')).map(b => 
+            TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc'))
+        );
+        const back = await getRouteData(locs[locs.length-1], locs[0], backSelected, backTime);
         totalKm += back.km;
         totalToll += back.toll;
         totalSec += back.sec;
@@ -116,30 +119,22 @@ async function calculate() {
         drGo.setDirections(go.raw);
     }
     updateUI(totalKm, totalToll, totalSec);
+    btn.style.opacity = "1";
 }
 
-// 核心導航與排序邏輯
 async function getRouteData(start, end, tunnels, time) {
     return new Promise(resolve => {
         let pts = tunnels.map(t => ({ location: t.loc, stopover: true, lat: t.lat, toll: getToll(t.loc, time) }));
-        
-        // 智慧方向判斷
-        const ntKeywords = ['sha tin', 'tai po', 'fanling', 'yuen long', 'tuen mun', 'fo tan', '沙田', '火炭', '大埔', '粉嶺'];
+        const ntKeywords = ['sha tin', 'tai po', 'fanling', 'yuen long', 'tuen mun', 'fo tan', '沙田', '火炭', '大埔'];
         const isNorthbound = ntKeywords.some(k => end.toLowerCase().includes(k));
         
-        if (isNorthbound) pts.sort((a, b) => a.lat - b.lat); // 南到北
-        else pts.sort((a, b) => b.lat - a.lat); // 北到南
+        if (isNorthbound) pts.sort((a, b) => a.lat - b.lat);
+        else pts.sort((a, b) => b.lat - a.lat);
 
         const tollSum = pts.reduce((a, b) => a + b.toll, 0);
         const cleanWays = pts.map(p => ({ location: p.location, stopover: true }));
 
-        ds.route({ 
-            origin: start, 
-            destination: end, 
-            waypoints: cleanWays, 
-            travelMode: 'DRIVING', 
-            optimizeWaypoints: false 
-        }, (res, stat) => {
+        ds.route({ origin: start, destination: end, waypoints: cleanWays, travelMode: 'DRIVING', optimizeWaypoints: false }, (res, stat) => {
             if (stat === 'OK') {
                 const km = res.routes[0].legs.reduce((a, b) => a + b.distance.value, 0) / 1000;
                 const sec = res.routes[0].legs.reduce((a, b) => a + b.duration.value, 0);
@@ -152,11 +147,23 @@ async function getRouteData(start, end, tunnels, time) {
 function updateUI(km, toll, sec) {
     const car = document.getElementById('car-model').value.split('|');
     const energy = km * parseFloat(car[0]) * parseFloat(car[1]);
+    const evTotal = energy + toll;
+
     document.getElementById('km').innerText = km.toFixed(1) + " km";
     document.getElementById('duration').innerText = Math.round(sec / 60) + " min";
     document.getElementById('t-fee').innerText = "$" + toll;
     document.getElementById('e-cost').innerText = "$" + energy.toFixed(1);
-    document.getElementById('total').innerText = (energy + toll).toFixed(1);
+    document.getElementById('total').innerText = evTotal.toFixed(1);
+
+    // 節省開支計算 ($1.8/km 基準)
+    const fuelCostBase = km * 1.8; 
+    const savedAmount = fuelCostBase - energy;
+    const savingsEl = document.getElementById('savings');
+    savingsEl.innerText = "$" + Math.max(0, savedAmount).toFixed(1);
+
+    // 視覺回饋
+    savingsEl.style.color = "#FFD700";
+    setTimeout(() => { savingsEl.style.color = "#4CD964"; }, 500);
 }
 
 function addNode() {
@@ -171,5 +178,8 @@ function addNode() {
 function toggleReturn() {
     returnMode = !returnMode;
     document.getElementById('retBtn').classList.toggle('active', returnMode);
+    document.querySelectorAll('.return-only').forEach(el => el.style.display = returnMode ? 'block' : 'none');
     calculate();
 }
+
+initApp();

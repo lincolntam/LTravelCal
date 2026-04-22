@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tesla Smart Route HK</title>
-    <link rel="stylesheet" href="style.css?v=0.21">
+    <title>(L)TravelCal - Precision Route Logic</title>
+    <link rel="stylesheet" href="style.css?v=0.27">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
 
 <div class="app-banner">
     <div class="banner-overlay">
-        <h1>Tesla Route Planner</h1>
-        <p>2026 Smart Energy & Toll Expert</p>
+        <h1>(L)TravelCal</h1>
+        <p>Precision Navigation • Dynamic Tolls • Energy Logic</p>
     </div>
 </div>
 
@@ -48,16 +48,18 @@
             </div>
             <div class="settings-group">
                 <div class="setting-item">
-                    <span>出發時間</span>
+                    <span>去程時間</span>
                     <input type="datetime-local" id="start-time" onchange="calculate()">
+                </div>
+                <div class="setting-item return-only" style="display: none;">
+                    <span>回程時間</span>
+                    <input type="datetime-local" id="return-time" onchange="calculate()">
                 </div>
                 <div class="setting-item">
                     <span>充電方式</span>
                     <select id="car-model" onchange="calculate()">
                         <option value="0.160|3.85">Tesla Supercharger 繁忙 ($3.85)</option>
                         <option value="0.160|2.10">Tesla Supercharger 非繁忙 ($2.10)</option>
-                        <option value="0.160|1.34">中電 EV 住宅高峰 ($1.34)</option>
-                        <option value="0.160|0.91">中電 EV 住宅非高峰 ($0.91)</option>
                         <option value="0.180|0">免費充電站 (只計損耗)</option>
                     </select>
                 </div>
@@ -71,9 +73,17 @@
         <section class="card">
             <div class="card-header">
                 <span class="material-icons">directions_car</span>
-                <label>3. 隧道選擇</label>
+                <label>3. 去程隧道選擇 (Outbound)</label>
             </div>
             <div class="tunnel-grid" id="goTunnels"></div>
+        </section>
+
+        <section class="card return-only" style="display: none;">
+            <div class="card-header">
+                <span class="material-icons">settings_backup_restore</span>
+                <label>4. 回程隧道選擇 (Return)</label>
+            </div>
+            <div class="tunnel-grid" id="backTunnels"></div>
         </section>
 
         <div id="map"></div>
@@ -84,7 +94,7 @@
             <div class="stat-card"><span>總隧道費</span><b id="t-fee">$0</b></div>
             <div class="stat-card"><span>總充電費</span><b id="e-cost">$0</b></div>
         </section>
-        <div style="height: 140px;"></div>
+        <div style="height: 160px;"></div>
     </main>
 
     <footer class="bottom-nav">
@@ -92,15 +102,19 @@
             <div class="total-price">
                 <small>總預算估算</small>
                 <div class="price-val">HK$ <span id="total">0.0</span></div>
+                <div class="savings-tag">
+                    <span class="material-icons" style="font-size: 12px;">leaf_spark</span>
+                    預計節省燃油開支: <span id="savings">$0.0</span>
+                </div>
             </div>
             <button class="primary-btn" onclick="calculate()">更新預算</button>
         </div>
     </footer>
 </div>
 
-<div class="version-tag">v0.21</div>
+<div class="version-tag">v0.27</div>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrlGmF4KTgFE8TeZyntoyaxxc6Qq0e7jY&libraries=places&callback=initApp" async defer></script>
-<script src="app.js?v=0.21"></script>
+<script src="app.js?v=0.27"></script>
 </body>
 </html>
