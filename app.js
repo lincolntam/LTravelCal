@@ -1,7 +1,13 @@
+/* Tesla Smart Route HK - Version 0.20
+   - Fix: Removed illegal 'lat' property from waypoints (Fixed InvalidValueError)
+   - Fix: Added manual keyword direction detection (Fallback for disabled Geocoding API)
+   - Feature: Support for Shing Mun and Tate's Cairn Tunnels
+*/
+
 let map, ds, drGo;
 let returnMode = false;
 
-// ✅ 緯度用於判斷南北順序
+// ✅ 緯度 (lat) 越高代表位置越北；用於自動排序順序
 const TUNNEL_DATA = [
     { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|元朗|屯門", toll: "tlt", lat: 22.41 },
     { id: "smt", name: "城門", loc: "Shing Mun Tunnels", match: "Tsuen Wan|Sha Tin|葵涌|荃灣|沙田", toll: 5, lat: 22.38 },
@@ -17,8 +23,10 @@ const TUNNEL_DATA = [
 function initApp() {
     ds = new google.maps.DirectionsService();
     drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#E3193F", strokeWeight: 5 } });
+    
     const now = new Date();
     document.getElementById('start-time').value = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    
     document.querySelectorAll('.node-input').forEach(bindAutocomplete);
     renderButtons('goTunnels');
     smartFilterTunnels(); 
@@ -26,7 +34,10 @@ function initApp() {
 
 function bindAutocomplete(inp) {
     const ac = new google.maps.places.Autocomplete(inp, { componentRestrictions: { country: "hk" } });
-    ac.addListener('place_changed', () => { smartFilterTunnels(); calculate(); });
+    ac.addListener('place_changed', () => { 
+        smartFilterTunnels(); 
+        calculate(); 
+    });
 }
 
 function renderButtons(id) {
@@ -35,7 +46,10 @@ function renderButtons(id) {
         const div = document.createElement('div');
         div.className = 't-btn';
         div.innerText = t.name;
-        div.onclick = function() { this.classList.toggle('active'); calculate(); };
+        div.onclick = function() { 
+            this.classList.toggle('active'); 
+            calculate(); 
+        };
         div.setAttribute('data-loc', t.loc);
         container.appendChild(div);
     });
@@ -57,16 +71,21 @@ function getToll(loc, targetDate) {
 function smartFilterTunnels() {
     const showAll = document.getElementById('show-all-tunnels').checked;
     const combined = Array.from(document.querySelectorAll('.node-input')).map(i => i.value.toLowerCase()).join(" ");
+    
     document.querySelectorAll('.t-btn').forEach(btn => {
         const data = TUNNEL_DATA.find(d => d.loc === btn.getAttribute('data-loc'));
         const matched = data.match.toLowerCase().split('|').some(term => combined.includes(term));
-        if (showAll || matched) btn.classList.add('visible');
-        else btn.classList.remove('visible', 'active');
+        if (showAll || matched) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible', 'active');
+        }
     });
 }
 
 async function calculate() {
-    const locs = Array.from(document.querySelectorAll('.node-input')).map(i => i.value).filter(v => v.length > 2);
+    const inputs = document.querySelectorAll('.node-input');
+    const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 2);
     if (locs.length < 2) return;
 
     if (!map) {
@@ -80,36 +99,55 @@ async function calculate() {
     const timeVal = document.getElementById('start-time').value;
     if (timeVal) { const [hrs, mins] = timeVal.split(':'); time.setHours(hrs, mins); }
 
+    // 1. 收集點並記錄緯度用於排序
     let selectedPoints = Array.from(document.querySelectorAll('.t-btn.active')).map(b => {
         const data = TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc'));
-        return { location: data.loc, stopover: true, lat: data.lat, toll: getToll(data.loc, time) };
+        return { 
+            location: data.loc, 
+            stopover: true, 
+            lat: data.lat, 
+            tollValue: getToll(data.loc, time) 
+        };
     });
 
-    // 💡 核心：偵測起終點緯度以自動排序
-    const geocoder = new google.maps.Geocoder();
-    try {
-        const [oRes, dRes] = await Promise.all([
-            new Promise(res => geocoder.geocode({address: locs[0]}, res)),
-            new Promise(res => geocoder.geocode({address: locs[locs.length-1]}, res))
-        ]);
-        const sLat = oRes[0].geometry.location.lat();
-        const eLat = dRes[0].geometry.location.lat();
-        // 南下行程：緯度由大到小排 (北到南)
-        if (sLat > eLat) selectedPoints.sort((a, b) => b.lat - a.lat);
-        // 北上行程：緯度由小到大排 (南到北)
-        else selectedPoints.sort((a, b) => a.lat - b.lat);
-    } catch(e) { selectedPoints.sort((a, b) => b.lat - a.lat); }
+    // 2. 💡 智慧方向偵測邏輯 (不依賴 Geocoding API)
+    let isSouthbound = true; 
+    const ntKeywords = ['sha tin', 'tai po', 'fanling', 'sheung shui', 'yuen long', 'tuen mun', 'ma on shan', 'fo tan', '科學園', '沙田', '火炭', '大埔'];
+    const islandKeywords = ['central', 'wanchai', 'causeway bay', 'quarry bay', 'chai wan', 'siu sai wan', '香港仔', '中環', '灣仔', '小西灣', '柴灣'];
+    
+    const startStr = locs[0].toLowerCase();
+    const endStr = locs[locs.length-1].toLowerCase();
 
-    let totalToll = selectedPoints.reduce((acc, p) => acc + p.toll, 0);
+    if (ntKeywords.some(k => startStr.includes(k)) || islandKeywords.some(k => endStr.includes(k))) {
+        isSouthbound = true;
+    } else if (islandKeywords.some(k => startStr.includes(k)) || ntKeywords.some(k => endStr.includes(k))) {
+        isSouthbound = false;
+    }
 
-    const finalWays = [];
-    for(let i=1; i < locs.length - 1; i++) { finalWays.push({ location: locs[i], stopover: true }); }
-    finalWays.push(...selectedPoints);
+    // 執行排序：南下則北到南排列，北上則反之
+    if (isSouthbound) {
+        selectedPoints.sort((a, b) => b.lat - a.lat);
+    } else {
+        selectedPoints.sort((a, b) => a.lat - b.lat);
+    }
+
+    let totalToll = selectedPoints.reduce((acc, p) => acc + p.tollValue, 0);
+
+    // 3. ⚠️ 重要：過濾非法屬性，只保留 Google 認識的欄位
+    const cleanWaypoints = [];
+    // 加入手動中途站
+    for(let i=1; i < locs.length - 1; i++) { 
+        cleanWaypoints.push({ location: locs[i], stopover: true }); 
+    }
+    // 加入排序後的隧道點
+    selectedPoints.forEach(p => {
+        cleanWaypoints.push({ location: p.location, stopover: p.stopover });
+    });
 
     ds.route({
         origin: locs[0],
         destination: locs[locs.length-1],
-        waypoints: finalWays,
+        waypoints: cleanWaypoints,
         travelMode: 'DRIVING',
         optimizeWaypoints: false 
     }, (res, stat) => {
@@ -120,6 +158,8 @@ async function calculate() {
             const km = res.routes[0].legs.reduce((a, b) => a + b.distance.value, 0) / 1000;
             const sec = res.routes[0].legs.reduce((a, b) => a + b.duration.value, 0);
             updateUI(km, totalToll, sec);
+        } else {
+            console.error("Route calculation failed: " + stat);
         }
     });
 }
