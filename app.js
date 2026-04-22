@@ -1,7 +1,7 @@
 let map, ds, drGo;
 let returnMode = false;
 
-// ✅ 緯度 (lat) 越高代表位置越北
+// ✅ 緯度用於判斷南北順序
 const TUNNEL_DATA = [
     { id: "tlt", name: "大欖", loc: "Tai Lam Tunnel", match: "Yuen Long|Tuen Mun|元朗|屯門", toll: "tlt", lat: 22.41 },
     { id: "smt", name: "城門", loc: "Shing Mun Tunnels", match: "Tsuen Wan|Sha Tin|葵涌|荃灣|沙田", toll: 5, lat: 22.38 },
@@ -80,26 +80,36 @@ async function calculate() {
     const timeVal = document.getElementById('start-time').value;
     if (timeVal) { const [hrs, mins] = timeVal.split(':'); time.setHours(hrs, mins); }
 
-    let totalToll = 0;
-    
-    // 1. 收集隧道並獲取緯度
-    let selectedWaypoints = Array.from(document.querySelectorAll('.t-btn.active')).map(b => {
+    let selectedPoints = Array.from(document.querySelectorAll('.t-btn.active')).map(b => {
         const data = TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc'));
-        totalToll += getToll(data.loc, time);
-        return { location: data.loc, stopover: true, lat: data.lat };
+        return { location: data.loc, stopover: true, lat: data.lat, toll: getToll(data.loc, time) };
     });
 
-    // 2. 💡 地理自動排序：南下行程按緯度由高到低排列
-    selectedWaypoints.sort((a, b) => b.lat - a.lat);
+    // 💡 核心：偵測起終點緯度以自動排序
+    const geocoder = new google.maps.Geocoder();
+    try {
+        const [oRes, dRes] = await Promise.all([
+            new Promise(res => geocoder.geocode({address: locs[0]}, res)),
+            new Promise(res => geocoder.geocode({address: locs[locs.length-1]}, res))
+        ]);
+        const sLat = oRes[0].geometry.location.lat();
+        const eLat = dRes[0].geometry.location.lat();
+        // 南下行程：緯度由大到小排 (北到南)
+        if (sLat > eLat) selectedPoints.sort((a, b) => b.lat - a.lat);
+        // 北上行程：緯度由小到大排 (南到北)
+        else selectedPoints.sort((a, b) => a.lat - b.lat);
+    } catch(e) { selectedPoints.sort((a, b) => b.lat - a.lat); }
 
-    const finalWaypoints = [];
-    for(let i=1; i < locs.length - 1; i++) { finalWaypoints.push({ location: locs[i], stopover: true }); }
-    finalWaypoints.push(...selectedWaypoints);
+    let totalToll = selectedPoints.reduce((acc, p) => acc + p.toll, 0);
+
+    const finalWays = [];
+    for(let i=1; i < locs.length - 1; i++) { finalWays.push({ location: locs[i], stopover: true }); }
+    finalWays.push(...selectedPoints);
 
     ds.route({
         origin: locs[0],
         destination: locs[locs.length-1],
-        waypoints: finalWaypoints,
+        waypoints: finalWays,
         travelMode: 'DRIVING',
         optimizeWaypoints: false 
     }, (res, stat) => {
