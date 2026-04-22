@@ -1,6 +1,6 @@
-/* (L)TravelCal - Version 0.29 */
+/* (L)TravelCal - Version 0.31 */
 
-let map, ds, drGo;
+let map, ds, drGo, drBack;
 let returnMode = false;
 
 const TUNNEL_DATA = [
@@ -17,7 +17,15 @@ const TUNNEL_DATA = [
 
 function initApp() {
     ds = new google.maps.DirectionsService();
-    drGo = new google.maps.DirectionsRenderer({ polylineOptions: { strokeColor: "#E3193F", strokeWeight: 5 } });
+    // ✅ 去程：紅色
+    drGo = new google.maps.DirectionsRenderer({ 
+        polylineOptions: { strokeColor: "#E3193F", strokeWeight: 6, strokeOpacity: 0.8 } 
+    });
+    // ✅ 回程：藍色
+    drBack = new google.maps.DirectionsRenderer({ 
+        polylineOptions: { strokeColor: "#1976D2", strokeWeight: 5, strokeOpacity: 0.7 },
+        suppressMarkers: true 
+    });
     
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
@@ -27,7 +35,6 @@ function initApp() {
     document.querySelectorAll('.node-input').forEach(bindAutocomplete);
     renderButtons('goTunnels', 'go');
     renderButtons('backTunnels', 'back');
-    smartFilterTunnels(); 
 }
 
 function bindAutocomplete(inp) {
@@ -73,65 +80,52 @@ function smartFilterTunnels() {
     const combined = Array.from(document.querySelectorAll('.node-input')).map(i => i.value.toLowerCase()).join(" ");
     document.querySelectorAll('.t-btn').forEach(btn => {
         const data = TUNNEL_DATA.find(d => d.loc === btn.getAttribute('data-loc'));
-        const matched = data.match.toLowerCase().split('|').some(term => combined.includes(term));
-        if (showAll || matched) btn.classList.add('visible');
+        if (showAll || data.match.toLowerCase().split('|').some(term => combined.includes(term))) btn.classList.add('visible');
         else btn.classList.remove('visible', 'active');
     });
 }
 
 async function calculate() {
-    const btn = document.querySelector('.primary-btn');
-    btn.style.opacity = "0.7";
-
     const inputs = document.querySelectorAll('.node-input');
     const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 2);
-    if (locs.length < 2) { btn.style.opacity = "1"; return; }
+    if (locs.length < 2) return;
+
+    if (!map) map = new google.maps.Map(document.getElementById('map'), { 
+        zoom: 12, center: { lat: 22.3, lng: 114.1 }, 
+        disableDefaultUI: true, 
+        styles: [{stylers:[{invert_lightness:true}]}] 
+    });
+
+    drGo.setMap(null); drBack.setMap(null);
 
     const goTime = new Date(document.getElementById('start-time').value);
-    const goSelected = Array.from(document.querySelectorAll('.go-t.active')).map(b => 
-        TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc'))
-    );
+    const goSelected = Array.from(document.querySelectorAll('.go-t.active')).map(b => TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc')));
     const go = await getRouteData(locs[0], locs[locs.length-1], goSelected, goTime);
 
     let totalKm = go.km, totalToll = go.toll, totalSec = go.sec;
 
+    if (go.raw) { drGo.setMap(map); drGo.setDirections(go.raw); }
+
     if (returnMode) {
         const backTime = new Date(document.getElementById('return-time').value);
-        const backSelected = Array.from(document.querySelectorAll('.back-t.active')).map(b => 
-            TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc'))
-        );
+        const backSelected = Array.from(document.querySelectorAll('.back-t.active')).map(b => TUNNEL_DATA.find(d => d.loc === b.getAttribute('data-loc')));
         const back = await getRouteData(locs[locs.length-1], locs[0], backSelected, backTime);
-        totalKm += back.km;
-        totalToll += back.toll;
-        totalSec += back.sec;
+        totalKm += back.km; totalToll += back.toll; totalSec += back.sec;
+        if (back.raw) { drBack.setMap(map); drBack.setDirections(back.raw); }
     }
 
-    if (go.raw) {
-        document.getElementById('map').style.display = 'block';
-        if (!map) map = new google.maps.Map(document.getElementById('map'), { zoom: 12, center: { lat: 22.3, lng: 114.1 }, disableDefaultUI: true, styles: [{stylers:[{invert_lightness:true}]}] });
-        drGo.setMap(map);
-        drGo.setDirections(go.raw);
-    }
     updateUI(totalKm, totalToll, totalSec);
-    btn.style.opacity = "1";
 }
 
 async function getRouteData(start, end, tunnels, time) {
     return new Promise(resolve => {
         let pts = tunnels.map(t => ({ location: t.loc, stopover: true, lat: t.lat, toll: getToll(t.loc, time) }));
-        const ntKeywords = ['sha tin', 'tai po', 'fanling', 'yuen long', 'tuen mun', 'fo tan', '沙田', '火炭', '大埔'];
-        const isNorthbound = ntKeywords.some(k => end.toLowerCase().includes(k));
-        if (isNorthbound) pts.sort((a, b) => a.lat - b.lat);
-        else pts.sort((a, b) => b.lat - a.lat);
-
-        const tollSum = pts.reduce((a, b) => a + b.toll, 0);
-        const cleanWays = pts.map(p => ({ location: p.location, stopover: true }));
-
-        ds.route({ origin: start, destination: end, waypoints: cleanWays, travelMode: 'DRIVING', optimizeWaypoints: false }, (res, stat) => {
+        pts.sort((a, b) => end.includes('Sha Tin') ? a.lat - b.lat : b.lat - a.lat);
+        ds.route({ origin: start, destination: end, waypoints: pts.map(p=>({location:p.location, stopover:true})), travelMode: 'DRIVING' }, (res, stat) => {
             if (stat === 'OK') {
                 const km = res.routes[0].legs.reduce((a, b) => a + b.distance.value, 0) / 1000;
                 const sec = res.routes[0].legs.reduce((a, b) => a + b.duration.value, 0);
-                resolve({ km, toll: tollSum, sec, raw: res });
+                resolve({ km, toll: pts.reduce((a,b)=>a+b.toll, 0), sec, raw: res });
             } else resolve({ km: 0, toll: 0, sec: 0, raw: null });
         });
     });
@@ -140,29 +134,19 @@ async function getRouteData(start, end, tunnels, time) {
 function updateUI(km, toll, sec) {
     const car = document.getElementById('car-model').value.split('|');
     const energy = km * parseFloat(car[0]) * parseFloat(car[1]);
-    const evTotal = energy + toll;
-
     document.getElementById('km').innerText = km.toFixed(1) + " km";
     document.getElementById('duration').innerText = Math.round(sec / 60) + " min";
     document.getElementById('t-fee').innerText = "$" + toll;
     document.getElementById('e-cost').innerText = "$" + energy.toFixed(1);
-    document.getElementById('total').innerText = evTotal.toFixed(1);
-
-    const fuelCostBase = km * 1.8; 
-    const savedAmount = fuelCostBase - energy;
-    const savingsEl = document.getElementById('savings');
-    savingsEl.innerText = "$" + Math.max(0, savedAmount).toFixed(1);
-
-    savingsEl.style.color = "#FFD700";
-    setTimeout(() => { savingsEl.style.color = "#4CD964"; }, 500);
+    document.getElementById('total').innerText = (energy + toll).toFixed(1);
+    document.getElementById('savings').innerText = "$" + (km * 1.8 - energy).toFixed(1);
 }
 
 function addNode() {
-    const container = document.getElementById('nodes-container');
     const div = document.createElement('div');
     div.className = 'input-group';
     div.innerHTML = `<input class="node-input" placeholder="中途站" autocomplete="off">`;
-    container.appendChild(div);
+    document.getElementById('nodes-container').appendChild(div);
     bindAutocomplete(div.querySelector('.node-input'));
 }
 
