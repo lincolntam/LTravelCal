@@ -1,24 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-HK">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tesla Smart Route HK</title>
-    <link rel="stylesheet" href="style.css?v=0.13">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-</head>
-<body>
-
-<div class="app-banner">
-    <div class="banner-overlay">
-        <h1>Tesla Route Planner</h1>
-        <p>2026 Smart Energy & Toll Expert</p>
-    </div>
-</div>
-
-<div class="app-container">
-    <main class="content">
-        <section class="card">
+<section class="card">
             <div class="card-header">
                 <span class="material-icons">place</span>
                 <label>1. 行程節點 (Nodes)</label>
@@ -26,16 +6,18 @@
             <div id="nodes-container">
                 <div class="input-group">
                     <input class="node-input" placeholder="由哪裡出發？" autocomplete="off">
-                    <span class="clear-btn" onclick="removeNode(this)">✕</span>
                 </div>
                 <div class="input-group">
                     <input class="node-input" placeholder="目的地在哪？" autocomplete="off">
-                    <span class="clear-btn" onclick="removeNode(this)">✕</span>
                 </div>
             </div>
-            <div class="action-row">
-                <button class="secondary-btn" onclick="addNode()"><span class="material-icons">add</span> 中途站</button>
-                <button class="secondary-btn" id="retBtn" onclick="toggleReturn()"><span class="material-icons">sync</span> 往返模式</button>
+            <div class="action-row" style="margin-top: 15px;">
+                <button class="secondary-btn" onclick="addNode()">
+                    <span class="material-icons">add_location</span> 中途站
+                </button>
+                <button class="secondary-btn" id="retBtn" onclick="toggleReturn()">
+                    <span class="material-icons">sync</span> 往返模式
+                </button>
             </div>
         </section>
 
@@ -44,67 +26,26 @@
                 <span class="material-icons">settings</span>
                 <label>2. 偏好設定 (Settings)</label>
             </div>
-            <div class="setting-item">
-                <span>出發時間</span>
-                <input type="time" id="start-time" onchange="calculate()">
-            </div>
-            <div class="setting-item">
-                <span>電動車充電方式</span>
-                <select id="car-model" onchange="calculate()">
-                    <option value="0.160|3.85">Tesla Supercharger 繁忙 ($3.85)</option>
-                    <option value="0.160|2.10">Tesla Supercharger 非繁忙 ($2.10)</option>
-                    <option value="0.160|1.34">中電 EV 住宅高峰 ($1.34)</option>
-                    <option value="0.160|0.91">中電 EV 住宅非高峰 ($0.91)</option>
-                    <option value="0.180|0">免費充電站 (只計損耗)</option>
-                </select>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <span>出發時間</span>
+                    <input type="time" id="start-time" onchange="calculate()">
+                </div>
+                <div class="setting-item">
+                    <span>充電方式</span>
+                    <select id="car-model" onchange="calculate()">
+                        <option value="0.160|3.85">Tesla Supercharger 繁忙 ($3.85)</option>
+                        <option value="0.160|2.10">Tesla Supercharger 非繁忙 ($2.10)</option>
+                        <option value="0.160|1.34">中電 EV 住宅高峰 ($1.34)</option>
+                        <option value="0.160|0.91">中電 EV 住宅非高峰 ($0.91)</option>
+                        <option value="0.180|0">免費充電站 (只計損耗)</option>
+                    </select>
+                </div>
             </div>
             <div class="checkbox-row">
                 <input type="checkbox" id="show-all-tunnels" onchange="smartFilterTunnels()"> 
                 <span>顯示全港所有隧道 (手動模式)</span>
             </div>
         </section>
-
-        <section class="card">
-            <div class="card-header">
-                <span class="material-icons">directions_car</span>
-                <label>3. 隧道選擇 (去程)</label>
-            </div>
-            <div class="tunnel-grid" id="goTunnels"></div>
-            
-            <div id="backTunnelSection" class="hidden">
-                <div class="card-header" style="margin-top:20px">
-                    <span class="material-icons">history</span>
-                    <label>4. 隧道選擇 (回程)</label>
-                </div>
-                <div class="tunnel-grid" id="backTunnels"></div>
-            </div>
-        </section>
-
-        <div id="map"></div>
-
-        <section class="stats-grid">
-            <div class="stat-card"><span>里程</span><b id="km">0.0 km</b></div>
-            <div class="stat-card"><span>時間</span><b id="duration">0 min</b></div>
-            <div class="stat-card"><span>隧道費</span><b id="t-fee">$0</b></div>
-            <div class="stat-card"><span>充電費</span><b id="e-cost">$0</b></div>
-        </section>
-        <div style="height: 140px;"></div>
-    </main>
-
-    <footer class="bottom-nav">
-        <div class="nav-content">
-            <div class="total-price">
-                <small>總預算估算</small>
-                <div class="price-val">HK$ <span id="total">0.0</span></div>
-            </div>
-            <button class="primary-btn" onclick="calculate()">更新預算</button>
-        </div>
-    </footer>
-</div>
-
-<div class="version-tag">v0.13</div>
-
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBrlGmF4KTgFE8TeZyntoyaxxc6Qq0e7jY&libraries=places&callback=initApp" async defer></script>
-<script src="app.js?v=0.13"></script>
-</body>
-</html>
+<div class="version-tag">v0.14</div>
+<script src="app.js?v=0.14"></script>
