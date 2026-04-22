@@ -45,7 +45,6 @@ function getToll(loc, targetDate) {
     const data = TUNNEL_DATA.find(d => d.loc === loc);
     if (!data) return 0;
     const h = targetDate.getHours() + targetDate.getMinutes()/60;
-
     if (data.toll === "h") {
         if ((h >= 7.5 && h < 10.25) || (h >= 16.5 && h < 19)) return 60;
         if (h >= 10.25 && h < 16.5) return 30;
@@ -65,9 +64,8 @@ function smartFilterTunnels() {
     
     document.querySelectorAll('.tunnel-grid .t-btn').forEach(btn => {
         const data = TUNNEL_DATA.find(d => d.loc === btn.getAttribute('data-loc'));
-        if (showAll) {
-            btn.classList.add('visible');
-        } else {
+        if (showAll) { btn.classList.add('visible'); } 
+        else {
             const isMatched = data.match.toLowerCase().split('|').some(term => combined.includes(term));
             if (isMatched) btn.classList.add('visible');
             else btn.classList.remove('visible', 'active');
@@ -80,10 +78,7 @@ async function calculate() {
     const locs = Array.from(inputs).map(i => i.value).filter(v => v.length > 2);
     const mapDiv = document.getElementById('map');
 
-    if (locs.length < 2) {
-        mapDiv.style.display = 'none';
-        return;
-    }
+    if (locs.length < 2) { mapDiv.style.display = 'none'; updateUI(0, 0, 0); return; }
 
     if (!map) map = new google.maps.Map(mapDiv, { zoom: 12, center: { lat: 22.3, lng: 114.1 }, disableDefaultUI: true, styles: [{stylers:[{invert_lightness:true}]}] });
 
@@ -105,6 +100,7 @@ async function calculate() {
             const km = res.routes[0].legs.reduce((a, b) => a + b.distance.value, 0) / 1000;
             const sec = res.routes[0].legs.reduce((a, b) => a + b.duration.value, 0);
             updateUI(km, totalToll, sec);
+            google.maps.event.trigger(map, 'resize');
         }
     });
 }
@@ -128,10 +124,7 @@ function addNode() {
     bindAutocomplete(div.querySelector('.node-input'));
 }
 
-function removeNode(btn) {
-    btn.parentElement.remove();
-    calculate();
-}
+function removeNode(btn) { btn.parentElement.remove(); calculate(); }
 
 function toggleReturn() {
     returnMode = !returnMode;

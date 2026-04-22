@@ -12,7 +12,7 @@
 <div class="app-banner">
     <div class="banner-overlay">
         <h1>Tesla Route Planner</h1>
-        <p>Smart Energy & Toll Calculator</p>
+        <p>2026 Smart Energy & Toll Expert</p>
     </div>
 </div>
 
@@ -25,11 +25,11 @@
             </div>
             <div id="nodes-container">
                 <div class="input-group">
-                    <input class="node-input" id="origin" placeholder="由哪裡出發？" autocomplete="off">
+                    <input class="node-input" placeholder="由哪裡出發？" autocomplete="off">
                     <span class="clear-btn" onclick="removeNode(this)">✕</span>
                 </div>
                 <div class="input-group">
-                    <input class="node-input" id="destination" placeholder="目的地在哪？" autocomplete="off">
+                    <input class="node-input" placeholder="目的地在哪？" autocomplete="off">
                     <span class="clear-btn" onclick="removeNode(this)">✕</span>
                 </div>
             </div>
@@ -80,7 +80,7 @@
             </div>
         </section>
 
-        <div id="map" class="map-view shadow-sm"></div>
+        <div id="map"></div>
 
         <section class="stats-grid">
             <div class="stat-card"><span>里程</span><b id="km">0.0 km</b></div>
@@ -88,7 +88,6 @@
             <div class="stat-card"><span>隧道費</span><b id="t-fee">$0</b></div>
             <div class="stat-card"><span>充電費</span><b id="e-cost">$0</b></div>
         </section>
-        
         <div style="height: 140px;"></div>
     </main>
 
